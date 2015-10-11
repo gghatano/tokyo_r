@@ -1,0 +1,206 @@
+other out : 0.40838509316770194
+atbat : 644
+other out : 0.40838509316770194
+atbat : 644
+other out : 0.40838509316770194
+atbat : 644
+other out : 0.40838509316770194
+atbat : 644
+other out : 0.40838509316770194
+atbat : 644
+other out : 0.40838509316770194
+atbat : 644
+other out : 0.40838509316770194
+atbat : 644
+other out : 0.40838509316770194
+atbat : 644
+other out : 0.40838509316770194
+atbat : 644
+Batter Name: 山田哲人
+Base: 1:0, 2: 0, 3: 0
+Result: Double
+----
+Batter Name: 山田哲人
+Base: 1:0, 2: 1, 3: 0
+Result: BB
+----
+Batter Name: 山田哲人
+Base: 1:1, 2: 0, 3: 1
+Result: BB
+----
+Batter Name: 山田哲人
+Base: 1:1, 2: 1, 3: 0
+Result: Swing Out
+----
+Batter Name: 山田哲人
+Base: 1:1, 2: 1, 3: 0
+Result: OUT
+----
+Batter Name: 山田哲人
+Base: 1:1, 2: 1, 3: 0
+Result: OUT
+----
+Change
+Three Out. Next Inning :: 2.
+-------------
+Batter Name: 山田哲人
+Base: 1:0, 2: 0, 3: 0
+Result: Single
+----
+Batter Name: 山田哲人
+Base: 1:1, 2: 0, 3: 0
+Result: Swing Out
+----
+Batter Name: 山田哲人
+Base: 1:1, 2: 0, 3: 0
+Result: Double
+----
+Batter Name: 山田哲人
+Base: 1:0, 2: 1, 3: 1
+Result: BB
+----
+Batter Name: 山田哲人
+Base: 1:1, 2: 0, 3: 1
+Result: Single
+----
+Batter Name: 山田哲人
+Base: 1:1, 2: 1, 3: 0
+Result: OUT
+----
+Batter Name: 山田哲人
+Base: 1:1, 2: 1, 3: 0
+Result: OUT
+----
+Change
+Three Out. Next Inning :: 3.
+-------------
+Batter Name: 山田哲人
+Base: 1:0, 2: 0, 3: 0
+Result: OUT
+----
+Batter Name: 山田哲人
+Base: 1:0, 2: 0, 3: 0
+Result: Swing Out
+----
+Batter Name: 山田哲人
+Base: 1:0, 2: 0, 3: 0
+Result: Double
+----
+Batter Name: 山田哲人
+Base: 1:0, 2: 1, 3: 0
+Result: OUT
+----
+Change
+Three Out. Next Inning :: 4.
+-------------
+Batter Name: 山田哲人
+Base: 1:0, 2: 0, 3: 0
+Result: OUT
+----
+Batter Name: 山田哲人
+Base: 1:0, 2: 0, 3: 0
+Result: Swing Out
+----
+Batter Name: 山田哲人
+Base: 1:0, 2: 0, 3: 0
+Result: OUT
+----
+Change
+Three Out. Next Inning :: 5.
+-------------
+Batter Name: 山田哲人
+Base: 1:0, 2: 0, 3: 0
+Result: HomeRun
+----
+Batter Name: 山田哲人
+Base: 1:0, 2: 0, 3: 0
+Result: BB
+----
+Batter Name: 山田哲人
+Base: 1:1, 2: 0, 3: 0
+Result: OUT
+----
+Batter Name: 山田哲人
+Base: 1:1, 2: 0, 3: 0
+Result: OUT
+----
+Batter Name: 山田哲人
+Base: 1:1, 2: 0, 3: 0
+Result: OUT
+----
+Change
+Three Out. Next Inning :: 6.
+-------------
+Batter Name: 山田哲人
+Base: 1:0, 2: 0, 3: 0
+Result: OUT
+----
+Batter Name: 山田哲人
+Base: 1:0, 2: 0, 3: 0
+Result: OUT
+----
+Batter Name: 山田哲人
+Base: 1:0, 2: 0, 3: 0
+Result: Swing Out
+----
+Change
+Three Out. Next Inning :: 7.
+-------------
+Batter Name: 山田哲人
+Base: 1:0, 2: 0, 3: 0
+Result: Single
+----
+Batter Name: 山田哲人
+Base: 1:1, 2: 0, 3: 0
+Result: OUT
+----
+Batter Name: 山田哲人
+Base: 1:1, 2: 0, 3: 0
+Result: OUT
+----
+Batter Name: 山田哲人
+Base: 1:1, 2: 0, 3: 0
+Result: OUT
+----
+Change
+Three Out. Next Inning :: 8.
+-------------
+Batter Name: 山田哲人
+Base: 1:0, 2: 0, 3: 0
+Result: OUT
+----
+Batter Name: 山田哲人
+Base: 1:0, 2: 0, 3: 0
+Result: HomeRun
+----
+Batter Name: 山田哲人
+Base: 1:0, 2: 0, 3: 0
+Result: Single
+----
+Batter Name: 山田哲人
+Base: 1:1, 2: 0, 3: 0
+Result: Swing Out
+----
+Batter Name: 山田哲人
+Base: 1:1, 2: 0, 3: 0
+Result: OUT
+----
+Change
+Three Out. Next Inning :: 9.
+-------------
+Batter Name: 山田哲人
+Base: 1:0, 2: 0, 3: 0
+Result: Swing Out
+----
+Batter Name: 山田哲人
+Base: 1:0, 2: 0, 3: 0
+Result: OUT
+----
+Batter Name: 山田哲人
+Base: 1:0, 2: 0, 3: 0
+Result: OUT
+----
+Change
+Three Out. Next Inning :: 10.
+-------------
+Simulation Result: score is 5

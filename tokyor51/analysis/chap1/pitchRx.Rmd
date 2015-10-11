@@ -1,0 +1,10 @@
+田中まーくんのスプリット
+===
+
+```{r}
+library(pitchRx)
+library(dplyr)
+dat = scrape(start = "2014-04-05", end = "2014-04-05")
+
+```
+

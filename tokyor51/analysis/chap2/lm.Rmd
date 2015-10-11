@@ -1,0 +1,337 @@
+打撃能力の比較: XRみたいな指標を計算する
+====
+
+## はじめに 手元でセイバーメトリクス
+
+イチローと松井、どちらが凄いのかを考えます。
+
+ヒットを量産するイチロー。長打力の松井。打者のタイプが異なります。どうやって比べましょうか。
+
+セイバーメトリクスでは、打撃総合能力を表す指標がいくつか提案されています。
+
+今回は[XR](http://baseballconcrete.web.fc2.com/glossary.html#xr)という指標に注目します。
+
+表式は以下の通り(長いので少し省略があります)。
+
+$$
+\begin{aligned}
+\text{XR} & = 0.50\times \text{単打数} + 0.72 \times \text{二塁打数} + 1.04 \times {三塁打数} \\
+          & + 1.44 \times \text{本塁打数} + 0.34 \times \text{四死球数} +  0.25 \times \text{敬遠数} \\ 
+          & + 0.18 \times \text{盗塁数} - 0.098 \times{三振数} + \ldots 
+\end{aligned}
+$$
+
+XRは、選手が生み出した総得点を算出するための指標です。
+
+とはいったものの、各打席結果に、価値の重みをつけて線型和をとっているだけです。
+
+本塁打は1本あたり1.44点生み出す、という気持ちで作られています。
+
+なるほど。
+
+...この重み係数はどこから来たのでしょうか。
+
+## 線形回帰でヒットとホームランの価値を計算
+
+2005年のメジャーリーグの試合結果データを利用して、重み係数を作成します。
+
+チーム得点 ~ 単打数 + 二塁打数 + 三塁打数 + 本塁打数 + 四球数 + 盗塁数 + 盗塁失敗数 + 三振数 + 凡打数 
+
+という線型モデルを立てて、係数を推定します。
+
+これにより、各イベントの生み出す得点数を調べます。
+
+利用するデータは2005年のメジャーリーグ全試合全打席結果のデータです。
+
+イチローも松井も、まだ元気だった頃です。
+
+### 計算の準備
+
+まずはパッケージとデータの準備をします。
+
+```{r, message=FALSE}
+library(dplyr)
+library(data.table)
+library(tidyr)
+
+## devtools::install_github("gghatano/retrosheet")
+library(retrosheet)
+## データの用意。
+dat = retrosheet(2005) %>% as.data.frame
+## 内容確認 データのサイズ
+dat %>% dim
+
+## 内容確認 データの項目
+dat %>% names
+```
+
+97列もあります。各列の説明するだけでも大変です。
+
+試合の各状況が1行に表されている、ということだけ分かっていればいいです。
+
+2013年はレギュラーシーズン全体で```r dat %>% dim %>% .[1]```イベントがあった、ということです。
+
+使う列の意味は、使うときに説明します。
+
+### 試合-得点テーブルを作成
+
+線形回帰の目的変数用データが必要です。
+
+試合ID、ホームチームなのかビジターチームなのか、得点、という3列のテーブルを作ります。
+
+試合IDはGAME\_ID列。ホームorビジターの得点はHOME\_SCORE\_CT, AWAY\_SCOCE\_CT列で表されています。
+
+```{r}
+## ここで使うデータ
+dat_score = 
+  dat %>%
+  filter(GAME_END_FL == TRUE) %>% ## 1試合の最後の行である、という意味
+  select(GAME_ID, AWAY_SCORE_CT, HOME_SCORE_CT) 
+
+## 内容確認
+dat_score %>% head(1)
+
+## 試合別、ホーム/アウェイ別の得点
+dat_score_all = 
+  dat_score %>% 
+  gather(HOME_AWAY, SCORE, -GAME_ID) %>% 
+  mutate(HOME_AWAY_FLG = ifelse(HOME_AWAY=="HOME_SCORE_CT", 1, 0)) %>%
+  select(-HOME_AWAY)
+    
+## 結果の確認
+## GAME_IDの試合で、HOME/AWAYチームがSCORE点をとった。
+dat_score_all %>% head(1)
+```
+
+1行目を見ると、2005年04月05日のビジターチームは、2点とったみたいです。
+
+### 試合ごとに、各打撃イベントの発生回数を集計
+
+各種イベントの回数を集計します。
+
+GAME\_IDとHOME/AWAY, さらにEVENT\_CD列(イベントコード)を利用します。
+
+EVENT\_CDの詳細は[このページ](http://www.retrosheet.org/datause.txt)に書いてありますが、今回利用するところだけ抜粋します。
+
+EVENT\_CDと内容は、
+
+* 2  : 凡打
+* 3  : 三振
+* 4  : 盗塁
+* 6  : 盗塁死
+* 14 : 四球
+* 15 : 敬遠四球
+* 16 : 死球
+* 20 : 単打
+* 21 : 二塁打
+* 22 : 三塁打
+* 23 : 本塁打
+
+です。それぞれのイベントが出現した回数を、試合とチームごとに集計します。
+
+```{r}
+dat_game = 
+  dat %>% 
+  select(GAME_ID, BAT_HOME_ID, EVENT_CD) %>% 
+  filter(EVENT_CD %in% c(2:4,6,14:16, 20:23)) 
+
+## 各イベントのフラグを立てます
+dat_game_event = 
+  dat_game %>% 
+  mutate(generic_out = ifelse(EVENT_CD == 2, 1, 0)) %>%
+  mutate(strike_out = ifelse(EVENT_CD == 3, 1, 0)) %>%
+  mutate(steal_base = ifelse(EVENT_CD == 4, 1, 0)) %>%
+  mutate(caught_stealing = ifelse(EVENT_CD == 6, 1, 0)) %>%
+  mutate(bb = ifelse(EVENT_CD %in% c(14,16), 1, 0)) %>%
+  mutate(intentional = ifelse(EVENT_CD == 15, 1, 0)) %>%
+  mutate(single = ifelse(EVENT_CD == 20, 1, 0))  %>%
+  mutate(double = ifelse(EVENT_CD == 21, 1, 0)) %>%
+  mutate(triple = ifelse(EVENT_CD == 22, 1, 0)) %>%
+  mutate(homerun = ifelse(EVENT_CD == 23, 1, 0)) %>%
+  select(-EVENT_CD) %>% 
+  mutate(HOME_AWAY_FLG = BAT_HOME_ID) %>%
+  select(-BAT_HOME_ID)
+
+## 各イベント列でsumを取れば回数が出てきます。
+## summarise_eachを使えば簡単です。
+dat_game_event_count = 
+  dat_game_event %>%
+  group_by(GAME_ID, HOME_AWAY_FLG) %>%
+  summarise_each(funs(sum))
+
+## 結果の確認
+dat_game_event_count %>% head(1)
+
+```
+2005年4月5日のANA(エンゼルス)の試合で、アウェイチームが8三振6四球, 4単打2二塁打1本塁打だったみたいですね。
+
+ちゃんとできているように見えます。
+
+### 線形回帰
+
+準備が整ったので、テーブルを結合して線形回帰します。
+
+試合-得点テーブルと、試合-イベント回数テーブルを結合します。
+
+```{r}
+dat_score_event_count = 
+  dat_score_all %>% 
+  inner_join(dat_game_event_count, by = c("GAME_ID", "HOME_AWAY_FLG")) %>% 
+  select(-GAME_ID, -HOME_AWAY_FLG) 
+
+
+## 結合結果. 
+## SCORE点とった試合で、各イベントが何回あったか、という表です。
+dat_score_event_count %>% head(1)
+
+## 線形回帰
+lm_res = lm(dat_score_event_count, formula = SCORE ~ .)
+
+## 推定された係数
+lm_coef = coef(lm_res)
+```
+
+ホームラン1本は1.41点生み出す、という結果です。
+
+先ほどのXRの定義式では、係数は1.44でした。大体同じですね。
+
+XRの定義式: 
+$$
+\begin{aligned}
+\text{XR} & = 0.50\times \text{単打数} + 0.72 \times \text{二塁打数} + 1.04 \times {三塁打数} \\
+          & + 1.44 \times \text{本塁打数} + 0.34 \times \text{四死球数} +  0.25 \times \text{敬遠数} \\ 
+          & + 0.18 \times \text{盗塁数} - 0.098 \times{三振数} + \ldots .
+\end{aligned}
+$$
+
+今回、線形回帰で得られたXR:
+
+$$
+\begin{aligned}
+\text{XR} & = 0.47\times \text{単打数} + 0.76 \times \text{二塁打数} + 1.03 \times {三塁打数} \\
+          & + 1.40 \times \text{本塁打数} + 0.33 \times \text{四死球数} +  0.10 \times \text{敬遠数} \\ 
+          & + 0.09 \times \text{盗塁数} - 0.12 \times{三振数} + \ldots 
+\end{aligned}.
+$$
+
+盗塁の係数が大きく異なっています。どうしましょうか。分からないので、無視します。
+
+今回の線形回帰によって得られた係数によって、イチローと松井の打撃能力を評価してみます.
+
+## イチローと松井の打撃能力
+
+イベント重み係数から、得点創出能力XR(の簡易版)を計算してみます。
+
+RのLahmanパッケージに、通算成績データが入っています。
+
+```{r}
+library(Lahman)
+
+## 打撃成績を整理
+batting_stats = 
+  Batting %>% 
+  mutate(X1B = H - X2B - X3B - HR) %>%
+  mutate(GO = AB - H - SO) %>% 
+  mutate(BB = BB + HBP) %>% 
+  select(playerID, yearID, GO, AB, X1B, X2B, X3B, HR, SB, CS, BB, IBB, HBP, SO) 
+
+## 選手情報のマスター
+master_stats =
+  Master %>% 
+  mutate(name = paste(nameFirst, nameLast, sep = " ")) %>%
+  select(playerID, name)
+  
+## IDと結合して、フルネームを取得する
+batting_master = 
+  batting_stats %>% 
+  inner_join(master_stats, by = "playerID") 
+
+## イチローの成績
+batting_master %>% 
+  select(-playerID) %>%
+  filter(name == "Ichiro Suzuki")
+
+## 松井の成績
+batting_master %>% 
+  select(-playerID) %>%
+  filter(name == "Hideki Matsui") 
+
+## 今回計算するXRの簡易版を, ggXRとします。
+## 線型和をとればいいです。
+batting_ggXR = 
+  batting_master %>% 
+  mutate(ggXR = GO * lm_coef["generic_out"] + 
+                X1B * lm_coef["single"] + 
+                X2B * lm_coef["double"] + 
+                X3B * lm_coef["triple"] + 
+                HR  * lm_coef["homerun"] + 
+                SB  * lm_coef["steal_base"] + 
+                CS  * lm_coef["caught_stealing"] + 
+                BB  * lm_coef["bb"] + 
+                IBB  * lm_coef["intentional"] + 
+                SO  * lm_coef["strike_out"])
+```
+
+内容の確認をします。
+
+歴代の得点創出能力(ggXR)のランキングを見てみましょう。
+```{r}
+## 歴代ggXRのランキング
+batting_ggXR %>% 
+  arrange(desc(ggXR)) %>% 
+  select(-playerID) %>%
+  head(10)
+```
+
+歴代の得点創出能力、Top10です。パワーヒッターしかいません。
+
+1位から3位までバリーボンズです。ステロイド全盛期とはいえ、さすがです。
+
+では、イチローと松井の成績を出してみましょう。
+
+```{r}
+## シーズン通算の創出得点ランキング
+batting_ggXR %>%
+  filter(name %in% c("Ichiro Suzuki", "Hideki Matsui")) %>% 
+  arrange(desc(ggXR)) %>%
+  mutate(HIT = X1B + X2B + X3B + HR) %>% 
+  mutate(XR_ = ggXR) %>%
+  select(yearID, name, HIT, HR, XR_) %>%
+  head(5)
+```
+
+打席数が多かったイチローは、シーズン通算での創出得点が多いです。
+
+打席数で割ることで、打席辺りの創出得点が計算されます。
+
+セイバーメトリクスでは、XR27と呼ばれる指標に該当します。
+
+27アウトとられるまでに何点取れるか、というものです。
+
+```{r}
+## 打席あたりの創出得点
+batting_ggXR %>% 
+  filter(name %in% c("Ichiro Suzuki", "Hideki Matsui")) %>% 
+  mutate(ggXR27 = ggXR * 27 / (AB + BB + IBB + HBP)) %>%
+  arrange(desc(ggXR27)) %>%
+  mutate(XR27_ = ggXR27) %>%
+  select(yearID, name, ggXR, ggXR27) %>%
+  head
+```
+
+1打席あたりで計算すると、松井が凄いみたいです。
+
+ちなみに、XR27の値4.10は、今年のセリーグではエルナンデス(4.08)、パ・リーグではクルーズ(4.11)くらいで
+
+創出得点の意味では、そこそこ活躍した外国人、という程度の成績です。
+
+
+## まとめ
+
+打撃能力評価のために創出得点を計算して、イチローと松井の成績を比較してみました。
+
+セイバーメトリクスでは、XRと呼ばれる指標です。
+
+線形回帰によって打撃イベントの価値重みを計算すると、セイバーメトリクスの内容と似た結果が得られました。
+
+比べてみると、シーズン通算ではイチローが、1打席あたりでは松井が優れていました。

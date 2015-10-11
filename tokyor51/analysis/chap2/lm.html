@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+<title>+/- </title>
+
+<script type="text/javascript">
+window.onload = function() {
+  var imgs = document.getElementsByTagName('img'), i, img;
+  for (i = 0; i < imgs.length; i++) {
+    img = imgs[i];
+    // center an image if it is the only element of its parent
+    if (img.parentElement.childElementCount === 1)
+      img.parentElement.style.textAlign = 'center';
+  }
+};
+</script>
+
+
+
+<!-- MathJax scripts -->
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+<style type="text/css">
+
+</style>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- jQuery -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+
+<!-- highlight.js -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/default.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/highlight.min.js"></script>
+<script src="https://yandex.st/highlightjs/7.3/languages/r.min.js"></script>
+
+<!-- bootstrap -->
+<link href=https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css rel="stylesheet">
+<script src="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
+
+<!-- Manific Popup -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/magnific-popup.js/0.8.9/jquery.magnific-popup.min.js"></script>
+
+<script defer="defer">
+// Function to generate the dynamic table of contents
+jQuery.fn.generate_TOC = function () {
+  var base = $(this[0]);
+
+  var selectors = ['h1', 'h2', 'h3', 'h4'];
+
+  var last_ptr = [{}, {}, {}, {}];
+
+  var anchors = {};
+
+  generate_anchor = function (text) {
+    var test = text.replace(/\W/g, '_');
+
+    while(test in anchors){
+      //if no suffix, add one
+      if(test.match(/_\d+$/) === null){
+        test = test + "_2";
+      }
+      //else generate unique id for duplicates by adding one to the suffix
+      else {
+        test = test.replace(/_(\d+)$/, function(match, number){ var num=+number+1; return("_" + num) });
+      }
+    }
+    anchors[test]=1;
+    return(test);
+  }
+
+  $(selectors.join(',')).each(function () {
+    var heading = $(this);
+    var idx = selectors.indexOf(heading.prop('tagName').toLowerCase());
+    var itr = 0;
+
+    while (itr <= idx) {
+      if (jQuery.isEmptyObject(last_ptr[itr])) {
+        last_ptr[itr] = $('<ul>').addClass('nav');
+        if (itr === 0) {
+          base.append(last_ptr[itr])
+        } else {
+          if(last_ptr[itr-1].children('li').length === 0){
+            last_ptr[itr-1].append(last_ptr[itr]);
+          }
+          else {
+            last_ptr[itr - 1].children('li').last().append(last_ptr[itr]);
+          }
+        }
+      }
+      itr++;
+    }
+    var anchor = generate_anchor(heading.text());
+    heading.attr('id', anchor);
+    var a = $('<a>')
+    .text(heading.text())
+    .attr('href', '#' + anchor);
+
+  var li = $('<li>')
+    .append(a);
+
+  last_ptr[idx].append(li);
+  for (i = idx + 1; i < last_ptr.length; i++) {
+    last_ptr[i] = {};
+  }
+  });
+}
+/* run scripts when document is ready */
+$(function() {
+  "use strict";
+
+  var $window = $(window);
+  var $body = $(document.body);
+
+  document.title = $('h1').first().text();
+
+  /* size of thumbnails */
+  var thumbsize = "col-md-3";
+
+  var show_code =  false ;
+
+  var show_output =  true ;
+
+  var show_figure =  true ;
+
+  /* included languages */
+  var languages = [];
+
+  /* Using render_html, so add in code block */
+  $('pre.knitr').each(function(){
+    $(this).removeClass('knitr');
+    if($(this).find('code').length < 1){
+      $(this).wrapInner('<code class=' + $(this).attr('class') + '></code>');
+    }
+  });
+
+  /* style tables */
+  $('table').addClass('table table-striped table-bordered table-hover table-condensed');
+
+  /* add toggle panel to rcode blocks */
+  $('div.source,div.output,div.message,div.warning,div.error').each(function() {
+    var button = $('<h5 class="panel-title">+/- </h5>');
+
+    if($(this).hasClass('source')){
+      var code_block = $(this).find('code');
+      var lang_type = code_block.attr('class');
+      button.text(button.text() + lang_type + ' Code');
+      button.addClass('source ' + lang_type);
+      languages[lang_type]=0;
+      code_block.each(function(i, e) {
+        hljs.highlightBlock(e);
+      });
+      $(this).addClass('panel panel-primary ' + lang_type);
+    }
+    else if($(this).hasClass('output')){
+      button.text(button.text() + 'Output');
+      button.addClass('output');
+      $(this).addClass('panel panel-success');
+    }
+    else if($(this).hasClass('message')){
+      button.text(button.text() + 'Message');
+      button.addClass('message');
+      $(this).addClass('panel panel-info');
+    }
+    else if($(this).hasClass('warning')){
+      button.text(button.text() + 'Warning');
+      button.addClass('warning');
+      $(this).addClass('panel panel-warning');
+    }
+    else if($(this).hasClass('error')){
+      button.text(button.text() + 'Error');
+      button.addClass('error');
+      $(this).addClass('panel panel-danger');
+    }
+    else {
+      //console.log($(this));
+    }
+    $(this).prepend($('<div class="panel-heading toggle" />').append(button));
+  });
+
+  /* give images a lightbox and thumbnail classes to allow lightbox and thumbnails TODO: make gallery if graphs are grouped */
+  $('div.rimage img').each(function(){
+
+    //remove rimage div
+    $(this).unwrap();
+
+    var a = $(this).
+      wrap('<a href=# class="media-object pull-left mfp-image thumbnail ' + thumbsize + '"></a>').
+      parent();
+
+    var sibs = a.prevUntil('div.rimage,div.media');
+    var div = $('<div class="media" />');
+    if(sibs.length != 0){
+      sibs.addClass('media-body');
+      //need to reverse order as prevUntil puts objects in the order it found them
+      $(sibs.get().reverse()).wrapAll(div).parent().prepend(a);
+    }
+    else {
+      a.wrap(div);
+    }
+  });
+
+  $('div.chunk').addClass('media');
+
+  $('.rcode > .panel').addClass('media');
+  /* Magnific Popup */
+  $(".thumbnail").each(function(){
+    $(this).magnificPopup({
+      disableOn: 768,
+      closeOnContentClick: true,
+
+      type: 'image',
+      items: {
+        src: $(this).find('img').attr('src'),
+      }
+    });
+  });
+
+  /* add bootstrap classes */
+  $('body').wrapInner('<div class="container"><div class="row"><div class="contents">');
+
+  var create_language_links = function(){
+    var text='';
+    var language;
+    for(language in languages){
+      if(languages.hasOwnProperty(language)){
+        text += '<li><a href=# class="toggle-global source ' + language + '" type="source.' + language + '">' + language + '</a></li>\n';
+      }
+    }
+    return text;
+  }
+
+  var navbar =
+  '<div class="navbar navbar-fixed-bottom navbar-inverse">\
+    <div class="container">\
+      <div class="navbar-header">\
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-responsive-collapse">\
+          <span class="icon-bar"></span>\
+          <span class="icon-bar"></span>\
+          <span class="icon-bar"></span>\
+        </button>\
+      </div>\
+      <div id="bottom-navbar" class="navbar-collapse collapse navbar-responsive-collapse">\
+        <ul class="nav navbar-nav navbar-right">\
+          <li class="nav"><p class="navbar-text">Toggle</p></li>\
+          <li class="dropup">\
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Code <b class="caret"></b></a>\
+            <ul class="dropdown-menu">\
+              <li class="dropdown-header">Languages</li>'
+              + create_language_links() +
+              '<li><a href="#" type="all-source" class="toggle-global">All</a></li>\
+            </ul>\
+          </li>\
+          <li class="dropup">\
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Output <b class="caret"></b></a>\
+            <ul class="dropdown-menu">\
+              <li class="dropdown-header">Type</li>\
+                <li><a href="#" type="output" class="toggle-global">Output</a></li>\
+                <li><a href="#" type="message" class="toggle-global">Message</a></li>\
+                <li><a href="#" type="warning" class="toggle-global">Warning</a></li>\
+                <li><a href="#" type="error" class="toggle-global">Error</a></li>\
+                <li><a href="#" type="all-output" class="toggle-global">All</a></li>\
+            </ul>\
+          </li>\
+          <li><a href="#" class="toggle-figure">Figures</a></li>\
+        </ul>\
+      </div><!-- /.nav-collapse -->\
+    </div><!-- /.container -->\
+  </div>';
+  /* add navbar */
+  $('.container').append(navbar);
+
+  /* onclick toggle next code block */
+  $('.toggle').click(function() {
+    $(this).next('pre').slideToggle();
+    return false;
+  });
+
+  // global toggles
+  $('.toggle-global').click(function(){
+    var type = $(this).attr('type');
+    if(type == 'all-source'){
+      for(var language in languages){
+        $('li a[type="source.' + language + '"]').click();
+      }
+    }
+    if(type == 'all-output'){
+      $('li a[type=output], li a[type=message], li a[type=warning], li a[type=error]').click();
+    }
+    else {
+      if($(this).closest('li').hasClass('active')){
+        $('div.' + type).children('pre').slideUp();
+      }
+      else {
+        $('div.' + type).children('pre').slideDown();
+      }
+    }
+    $(this).closest('li').toggleClass('active');
+    return false;
+  });
+  // global toggles figure, this is more complicated than just slideToggle because you have to hide the parent div as well
+  $('.toggle-figure').click(function(){
+    var imgs = $('.thumbnail img');
+    if(imgs.is(":visible")){
+      imgs.slideUp(400, function(){ $(this).parent().toggle(); });
+    }
+    else {
+      imgs.parent().show();
+      imgs.show();
+    }
+    $(this).closest('li').toggleClass('active');
+    return false;
+  });
+
+  /* add footer */
+  $('body').wrapInner('<div id="wrap" />');
+  $('#wrap').append('<div id="push" />');
+  var p = $('p:contains("Author:")');
+  var last_p = p.filter(':last');
+  last_p.addClass('text-muted').attr('id','credit');
+  last_p.append('<p>Styled with <a href="https://github.com/jimhester/knitrBootstrap">knitrBootstrap</a></p>');
+  last_p = last_p.wrap('<div id="footer"><div class="container">').parent().parent();
+  last_p.appendTo("body");
+
+  $('.container > .row').prepend('<div class="col-md-3"><div id="toc" class="well sidebar sidenav affix hidden-print"/></div>');
+
+  $('.contents').addClass('col-md-offset-3');
+
+  /* table of contents */
+  $('#toc').generate_TOC();
+
+  if(show_code){
+    /* toggle source buttons pressed */
+    $('a.toggle-global.source').closest('li').addClass('active');
+  }
+  else {
+    /* hide code blocks */
+    $('div.source pre').hide();
+  }
+
+  if(show_output){
+    /* toggle output buttons pressed */
+    $('li a[type=output], li a[type=message], li a[type=warning], li a[type=error], li a[type=all-output]').closest('li').addClass('active');
+  }
+  else {
+    /* hide output blocks */
+    $('div.output pre').hide();
+  }
+
+  if(show_figure){
+    /* toggle figure button pressed */
+    $('li a.toggle-figure').closest('li').addClass('active');
+  }
+  else {
+    /* hide figures */
+    $('.thumbnail').hide();
+  }
+
+  /* remove paragraphs with no content */
+  $('p:empty').remove();
+
+  $body.scrollspy({
+    target: '.sidebar',
+  });
+
+
+  //TODO refresh on show/hide
+  $window.on('load', function () {
+    $body.scrollspy('refresh');
+  })
+
+});
+
+
+</script>
+<style>
+/* Knitr_bootstrap styles */
+#wrap .container-fluid {
+  padding: 0;
+  overflow: hidden;
+}
+.toggle{
+  text-transform: capitalize;
+}
+
+.toggle-global{
+  text-transform: capitalize;
+}
+
+/* Sticky footer styles */
+* {
+  margin:0;
+}
+html,
+body {
+    height: 100%;
+    padding:0 !important;
+    /* The html and body elements cannot have any padding or margin. */
+    /*overflow-x: hidden;*/
+}
+
+/* Wrapper for page content to push down footer */
+#wrap {
+    min-height: 100%;
+    height: auto !important;
+    height: 100%;
+    /* Negative indent footer by it's height */
+    margin: 0 auto -120px;
+}
+
+/* Set the fixed height of the footer here */
+#push,
+#footer {
+    height: 120px;
+}
+
+#footer {
+  text-align: center;
+}
+
+/* Top level subheader elements.  These are the first nested items underneath a header element. */
+.header li {
+  font-size: 20px;
+}
+
+/* Makes the font smaller for all subheader elements. */
+.sub-header li {
+    font-size: 12px;
+}
+
+button.thumbnails {
+  margin-left:0px;
+}
+
+/*
+ * Side navigation
+ *
+ * Scrollspy and affixed enhanced navigation to highlight sections and secondary
+ * sections of docs content.
+ */
+
+/* By default it's not affixed in mobile views, so undo that */
+.sidebar.affix {
+  position: static;
+}
+
+/* First level of nav */
+.sidenav {
+  margin-top: 30px;
+  margin-bottom: 30px;
+  padding-top:    10px;
+  padding-bottom: 10px;
+  border-radius: 5px;
+}
+
+/* All levels of nav */
+.sidebar .nav > li > a {
+  display: block;
+  padding: 5px 20px;
+}
+.sidebar .nav > li > a:hover,
+.sidebar .nav > li > a:focus {
+  text-decoration: none;
+  border-right: 1px solid;
+}
+.sidebar .nav > .active > a,
+.sidebar .nav > .active:hover > a,
+.sidebar .nav > .active:focus > a {
+  font-weight: bold;
+  background-color: transparent;
+  border-right: 1px solid;
+}
+
+/* Nav: second level (shown on .active) */
+.sidebar .nav .nav {
+  display: none; /* Hide by default, but at >768px, show it */
+  margin-bottom: 8px;
+}
+.sidebar .nav .nav > li > a {
+  padding-top:    3px;
+  padding-bottom: 3px;
+  padding-left: 30px;
+  font-size: 90%;
+}
+
+.sidebar .nav .nav .nav > li > a {
+  padding-left: 40px;
+}
+.sidebar .nav .nav .nav .nav > li > a {
+  padding-left: 50px;
+}
+
+/* Show and affix the side nav when space allows it */
+@media screen and (min-width: 992px) {
+  .sidebar .nav > .active > ul {
+    display: block;
+  }
+  /* Widen the fixed sidebar */
+  .sidebar.affix,
+  .sidebar.affix-bottom {
+    width: 213px;
+  }
+  .sidebar.affix-top,
+  .sidebar.affix {
+    position: fixed; /* Undo the static from mobile first approach */
+    top: 30px;
+  }
+  .sidebar.affix-bottom {
+    position: absolute; /* Undo the static from mobile first approach */
+  }
+  .sidebar.affix-bottom .sidenav,
+  .sidebar.affix .sidenav {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+}
+@media screen and (min-width: 1200px) {
+  /* Widen the fixed sidebar again */
+  .sidebar.affix-bottom,
+  .sidebar.affix {
+    width: 263px;
+  }
+}
+
+#toc {
+  padding: 10px 0px;
+  margin:0;
+  border:0;
+}
+
+
+.panel pre {
+  border-radius: 0;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.panel pre code {
+  border-radius: 0;
+}
+/* Magnific Popup CSS */
+.mfp-bg {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1042;
+  overflow: hidden;
+  position: fixed;
+  background: #0b0b0b;
+  opacity: 0.8;
+  filter: alpha(opacity=80); }
+
+.mfp-wrap {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1043;
+  position: fixed;
+  outline: none !important;
+  -webkit-backface-visibility: hidden; }
+
+.mfp-container {
+  text-align: center;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  left: 0;
+  top: 0;
+  padding: 0 8px;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box; }
+
+.mfp-container:before {
+  content: '';
+  display: inline-block;
+  height: 100%;
+  vertical-align: middle; }
+
+.mfp-align-top .mfp-container:before {
+  display: none; }
+
+.mfp-content {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0 auto;
+  text-align: left;
+  z-index: 1045; }
+
+.mfp-inline-holder .mfp-content,
+.mfp-ajax-holder .mfp-content {
+  width: 100%;
+  cursor: auto; }
+
+.mfp-ajax-cur {
+  cursor: progress; }
+
+.mfp-zoom-out-cur,
+.mfp-zoom-out-cur .mfp-image-holder .mfp-close {
+  cursor: -moz-zoom-out;
+  cursor: -webkit-zoom-out;
+  cursor: zoom-out; }
+
+.mfp-zoom {
+  cursor: pointer;
+  cursor: -webkit-zoom-in;
+  cursor: -moz-zoom-in;
+  cursor: zoom-in; }
+
+.mfp-auto-cursor .mfp-content {
+  cursor: auto; }
+
+.mfp-close,
+.mfp-arrow,
+.mfp-preloader,
+.mfp-counter {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none; }
+
+.mfp-loading.mfp-figure {
+  display: none; }
+
+.mfp-hide {
+  display: none !important; }
+
+.mfp-preloader {
+  color: #cccccc;
+  position: absolute;
+  top: 50%;
+  width: auto;
+  text-align: center;
+  margin-top: -0.8em;
+  left: 8px;
+  right: 8px;
+  z-index: 1044; }
+
+.mfp-preloader a {
+  color: #cccccc; }
+
+.mfp-preloader a:hover {
+  color: white; }
+
+.mfp-s-ready .mfp-preloader {
+  display: none; }
+
+.mfp-s-error .mfp-content {
+  display: none; }
+
+button.mfp-close,
+button.mfp-arrow {
+  overflow: visible;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  -webkit-appearance: none;
+  display: block;
+  padding: 0;
+  z-index: 1046;
+  -webkit-box-shadow: none;
+  box-shadow: none; }
+
+button::-moz-focus-inner {
+  padding: 0;
+  border: 0; }
+
+.mfp-close {
+  width: 44px;
+  height: 44px;
+  line-height: 44px;
+  position: absolute;
+  right: 0;
+  top: 0;
+  text-decoration: none;
+  text-align: center;
+  opacity: 0.65;
+  padding: 0 0 18px 10px;
+  color: white;
+  font-style: normal;
+  font-size: 28px;
+  font-family: Arial, Baskerville, monospace; }
+  .mfp-close:hover, .mfp-close:focus {
+    opacity: 1; }
+  .mfp-close:active {
+    top: 1px; }
+
+.mfp-close-btn-in .mfp-close {
+  color: #333333; }
+
+.mfp-image-holder .mfp-close,
+.mfp-iframe-holder .mfp-close {
+  color: white;
+  right: -6px;
+  text-align: right;
+  padding-right: 6px;
+  width: 100%; }
+
+.mfp-counter {
+  position: absolute;
+  top: 0;
+  right: 0;
+  color: #cccccc;
+  font-size: 12px;
+  line-height: 18px; }
+
+.mfp-arrow {
+  position: absolute;
+  opacity: 0.65;
+  margin: 0;
+  top: 50%;
+  margin-top: -55px;
+  padding: 0;
+  width: 90px;
+  height: 110px;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0); }
+
+.mfp-arrow:active {
+  margin-top: -54px; }
+
+.mfp-arrow:hover,
+.mfp-arrow:focus {
+  opacity: 1; }
+
+.mfp-arrow:before, .mfp-arrow:after,
+.mfp-arrow .mfp-b,
+.mfp-arrow .mfp-a {
+  content: '';
+  display: block;
+  width: 0;
+  height: 0;
+  position: absolute;
+  left: 0;
+  top: 0;
+  margin-top: 35px;
+  margin-left: 35px;
+  border: medium inset transparent; }
+.mfp-arrow:after,
+.mfp-arrow .mfp-a {
+  border-top-width: 13px;
+  border-bottom-width: 13px;
+  top: 8px; }
+.mfp-arrow:before,
+.mfp-arrow .mfp-b {
+  border-top-width: 21px;
+  border-bottom-width: 21px; }
+
+.mfp-arrow-left {
+  left: 0; }
+  .mfp-arrow-left:after,
+  .mfp-arrow-left .mfp-a {
+    border-right: 17px solid white;
+    margin-left: 31px; }
+  .mfp-arrow-left:before,
+  .mfp-arrow-left .mfp-b {
+    margin-left: 25px;
+    border-right: 27px solid #3f3f3f; }
+
+.mfp-arrow-right {
+  right: 0; }
+  .mfp-arrow-right:after,
+  .mfp-arrow-right .mfp-a {
+    border-left: 17px solid white;
+    margin-left: 39px; }
+  .mfp-arrow-right:before,
+  .mfp-arrow-right .mfp-b {
+    border-left: 27px solid #3f3f3f; }
+
+.mfp-iframe-holder {
+  padding-top: 40px;
+  padding-bottom: 40px; }
+
+.mfp-iframe-holder .mfp-content {
+  line-height: 0;
+  width: 100%;
+  max-width: 900px; }
+
+.mfp-iframe-scaler {
+  width: 100%;
+  height: 0;
+  overflow: hidden;
+  padding-top: 56.25%; }
+
+.mfp-iframe-scaler iframe {
+  position: absolute;
+  display: block;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
+  background: black; }
+
+.mfp-iframe-holder .mfp-close {
+  top: -40px; }
+
+/* Main image in popup */
+img.mfp-img {
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  display: block;
+  line-height: 0;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  padding: 40px 0 40px;
+  margin: 0 auto; }
+
+/* The shadow behind the image */
+.mfp-figure:after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 40px;
+  bottom: 40px;
+  display: block;
+  right: 0;
+  width: auto;
+  height: auto;
+  z-index: -1;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
+  background: #444444; }
+
+.mfp-figure {
+  line-height: 0; }
+
+.mfp-bottom-bar {
+  margin-top: -36px;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  cursor: auto; }
+
+.mfp-title {
+  text-align: left;
+  line-height: 18px;
+  color: #f3f3f3;
+  word-wrap: break-word;
+  padding-right: 36px; }
+
+.mfp-figure small {
+  color: #bdbdbd;
+  display: block;
+  font-size: 12px;
+  line-height: 14px; }
+
+.mfp-image-holder .mfp-content {
+  max-width: 100%; }
+
+.mfp-gallery .mfp-image-holder .mfp-figure {
+  cursor: pointer; }
+
+@media screen and (max-width: 800px) and (orientation: landscape), screen and (max-height: 300px) {
+  /**
+   * Remove all paddings around the image on small screen
+   */
+  .mfp-img-mobile .mfp-image-holder {
+    padding-left: 0;
+    padding-right: 0; }
+
+  .mfp-img-mobile img.mfp-img {
+    padding: 0; }
+
+  /* The shadow behind the image */
+  .mfp-img-mobile .mfp-figure:after {
+    top: 0;
+    bottom: 0; }
+
+  .mfp-img-mobile .mfp-bottom-bar {
+    background: rgba(0, 0, 0, 0.6);
+    bottom: 0;
+    margin: 0;
+    top: auto;
+    padding: 3px 5px;
+    position: fixed;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box; }
+
+  .mfp-img-mobile .mfp-bottom-bar:empty {
+    padding: 0; }
+
+  .mfp-img-mobile .mfp-counter {
+    right: 5px;
+    top: 3px; }
+
+  .mfp-img-mobile .mfp-close {
+    top: 0;
+    right: 0;
+    width: 35px;
+    height: 35px;
+    line-height: 35px;
+    background: rgba(0, 0, 0, 0.6);
+    position: fixed;
+    text-align: center;
+    padding: 0; }
+
+  .mfp-img-mobile .mfp-figure small {
+    display: inline;
+    margin-left: 5px; } }
+@media all and (max-width: 900px) {
+  .mfp-arrow {
+    -webkit-transform: scale(0.75);
+    transform: scale(0.75); }
+
+  .mfp-arrow-left {
+    -webkit-transform-origin: 0;
+    transform-origin: 0; }
+
+  .mfp-arrow-right {
+    -webkit-transform-origin: 100%;
+    transform-origin: 100%; }
+
+  .mfp-container {
+    padding-left: 6px;
+    padding-right: 6px; } }
+.mfp-ie7 .mfp-img {
+  padding: 0; }
+.mfp-ie7 .mfp-bottom-bar {
+  width: 600px;
+  left: 50%;
+  margin-left: -300px;
+  margin-top: 5px;
+  padding-bottom: 5px; }
+.mfp-ie7 .mfp-container {
+  padding: 0; }
+.mfp-ie7 .mfp-content {
+  padding-top: 44px; }
+.mfp-ie7 .mfp-close {
+  top: 0;
+  right: 0;
+  padding-top: 0; }
+
+//Magnific overrides
+.mfp-image img{
+  background: white;
+}
+.mfp-figure:after {
+  background: white;
+}
+
+</style>
+<link href=https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css rel="stylesheet" id='style'>
+<link rel="alternate stylesheet" type="text/css" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" title="Default" media="screen">
+<link rel="alternate stylesheet" type="text/css" href="https://netdna.bootstrapcdn.com/bootswatch/3.0.0/amelia/bootstrap.min.css" title="Amelia" media="screen">
+<link rel="alternate stylesheet" type="text/css" href="https://netdna.bootstrapcdn.com/bootswatch/3.0.0/cerulean/bootstrap.min.css" title="Cerulean" media="screen">
+<link rel="alternate stylesheet" type="text/css" href="https://netdna.bootstrapcdn.com/bootswatch/3.0.0/cosmo/bootstrap.min.css" title="Cosmo" media="screen">
+<link rel="alternate stylesheet" type="text/css" href="https://netdna.bootstrapcdn.com/bootswatch/3.0.0/cyborg/bootstrap.min.css" title="Cyborg" media="screen">
+<link rel="alternate stylesheet" type="text/css" href="https://netdna.bootstrapcdn.com/bootswatch/3.0.0/flatly/bootstrap.min.css" title="Flatly" media="screen">
+<link rel="alternate stylesheet" type="text/css" href="https://netdna.bootstrapcdn.com/bootswatch/3.0.0/journal/bootstrap.min.css" title="Journal" media="screen">
+<link rel="alternate stylesheet" type="text/css" href="https://netdna.bootstrapcdn.com/bootswatch/3.0.0/readable/bootstrap.min.css" title="Readable" media="screen">
+<link rel="alternate stylesheet" type="text/css" href="https://netdna.bootstrapcdn.com/bootswatch/3.0.0/simplex/bootstrap.min.css" title="Simplex" media="screen">
+<link rel="alternate stylesheet" type="text/css" href="https://netdna.bootstrapcdn.com/bootswatch/3.0.0/slate/bootstrap.min.css" title="Slate" media="screen">
+<link rel="alternate stylesheet" type="text/css" href="https://netdna.bootstrapcdn.com/bootswatch/3.0.0/spacelab/bootstrap.min.css" title="Spacelab" media="screen">
+<link rel="alternate stylesheet" type="text/css" href="https://netdna.bootstrapcdn.com/bootswatch/3.0.0/united/bootstrap.min.css" title="United" media="screen">
+
+          <!--<li><a class="style-switch" title="Superhero" href="#" >Superhero</a>  </li> \-->
+          <!--<li><a class="style-switch" title="Spruce" href="#"    >Spruce</a>     </li> \-->
+<script>
+$(function() {
+    $('#bottom-navbar').append(
+    '<ul class="nav navbar-nav navbar-left">\
+      <li class="dropup">\
+        <a class="dropdown-toggle" data-toggle="dropdown" href="#">Bootstrap Style</a>\
+        <ul class="dropdown-menu" role="menu" aria-labelledby="dLabel">\
+           <li class="active"><a class="style-switch" title="Default" href="#"   >Default</a></li> \
+           <li><a class="style-switch" title="Amelia" href="#"                   >Amelia</a></li> \
+           <li><a class="style-switch" title="Cerulean" href="#"                 >Cerulean</a></li> \
+           <li><a class="style-switch" title="Cosmo" href="#"                    >Cosmo</a></li> \
+           <li><a class="style-switch" title="Cyborg" href="#"                   >Cyborg</a></li> \
+           <li><a class="style-switch" title="Flatly" href="#"                   >Flatly</a></li> \
+           <li><a class="style-switch" title="Journal" href="#"                  >Journal</a></li> \
+           <li><a class="style-switch" title="Readable" href="#"                 >Readable</a></li> \
+           <li><a class="style-switch" title="Simplex" href="#"                  >Simplex</a></li> \
+           <li><a class="style-switch" title="Slate" href="#"                    >Slate</a></li> \
+           <li><a class="style-switch" title="Spacelab" href="#"                 >Spacelab</a></li> \
+           <li><a class="style-switch" title="United" href="#"                   >United</a></li> \
+        </ul>\
+      </li>\
+    </ul>');
+    $('.style-switch').click(function(){
+      var css = $('link[title=' + $(this).attr('title') + ']');
+      $('#style[rel=stylesheet]').attr('href', css.attr('href'));
+      $('.style-switch').closest('li').removeClass('active');
+      $(this).closest('li').addClass('active');
+      return false;
+    });
+  }
+);
+</script>
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/default.min.css" id="code-style" rel="stylesheet">
+<link title="Default-Code" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/default.min.css" rel="alternate stylesheet">
+<link title="Dark" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/dark.min.css" rel="alternate stylesheet">
+<link title="FAR" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/far.min.css" rel="alternate stylesheet">
+<link title="IDEA" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/idea.min.css" rel="alternate stylesheet">
+<link title="Sunburst" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/sunburst.min.css" rel="alternate stylesheet">
+<link title="Zenburn" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/zenburn.min.css" rel="alternate stylesheet">
+<link title="Visual Studio" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/vs.min.css" rel="alternate stylesheet">
+<link title="Ascetic" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/ascetic.min.css" rel="alternate stylesheet">
+<link title="Magula" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/magula.min.css" rel="alternate stylesheet">
+<link title="GitHub" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/github.min.css" rel="alternate stylesheet">
+<link title="Google Code" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/googlecode.min.css" rel="alternate stylesheet">
+<link title="Brown Paper" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/brown_paper.min.css" rel="alternate stylesheet">
+<link title="School Book" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/school_book.min.css" rel="alternate stylesheet">
+<link title="IR Black" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/ir_black.min.css" rel="alternate stylesheet">
+<link title="Solarized - Dark" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/solarized_dark.min.css" rel="alternate stylesheet">
+<link title="Solarized - Light" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/solarized_light.min.css" rel="alternate stylesheet">
+<link title="Arta" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/arta.min.css" rel="alternate stylesheet">
+<link title="Monokai" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/monokai.min.css" rel="alternate stylesheet">
+<link title="XCode" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/xcode.min.css" rel="alternate stylesheet">
+<link title="Pojoaque" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/pojoaque.min.css" rel="alternate stylesheet">
+<link title="Rainbow" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/rainbow.min.css" rel="alternate stylesheet">
+<link title="Tomorrow" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/tomorrow.min.css" rel="alternate stylesheet">
+<link title="Tomorrow Night" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/tomorrow-night.min.css" rel="alternate stylesheet">
+<link title="Tomorrow Night Bright" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/tomorrow-night-bright.min.css" rel="alternate stylesheet">
+<link title="Tomorrow Night Blue" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/tomorrow-night-blue.min.css" rel="alternate stylesheet">
+<link title="Tomorrow Night Eighties" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/7.3/styles/tomorrow-night-eighties.min.css" rel="alternate stylesheet">
+
+<script>
+$(function() {
+    $('#bottom-navbar').append(
+    '<ul class="nav navbar-nav">\
+      <li class="dropdown">\
+        <a class="dropdown-toggle" role="button" data-toggle="dropdown" href="#">Code Style</a>\
+        <ul class="dropdown-menu" role="menu" aria-labelledby="dLabel">\
+          <li class="active"><a class="code-style-switch" title="Default-Code" href="#">Default</a></li>\
+          <li><a class="code-style-switch" title="Dark" href="#"                       >Dark</a></li>\
+          <li><a class="code-style-switch" title="FAR" href="#"                        >FAR</a></li>\
+          <li><a class="code-style-switch" title="IDEA" href="#"                       >IDEA</a></li>\
+          <li><a class="code-style-switch" title="Sunburst" href="#"                   >Sunburst</a></li>\
+          <li><a class="code-style-switch" title="Zenburn" href="#"                    >Zenburn</a></li>\
+          <li><a class="code-style-switch" title="Visual Studio" href="#"              >Visual Studio</a></li>\
+          <li><a class="code-style-switch" title="Ascetic" href="#"                    >Ascetic</a></li>\
+          <li><a class="code-style-switch" title="Magula" href="#"                     >Magula</a></li>\
+          <li><a class="code-style-switch" title="GitHub" href="#"                     >GitHub</a></li>\
+          <li><a class="code-style-switch" title="Google Code" href="#"                >Google Code</a></li>\
+          <li><a class="code-style-switch" title="Brown Paper" href="#"                >Brown Paper</a></li>\
+          <li><a class="code-style-switch" title="School Book" href="#"                >School Book</a></li>\
+          <li><a class="code-style-switch" title="IR Black" href="#"                   >IR Black</a></li>\
+          <li><a class="code-style-switch" title="Solarized - Dark" href="#"           >Solarized - Dark</a></li>\
+          <li><a class="code-style-switch" title="Solarized - Light" href="#"          >Solarized - Light</a></li>\
+          <li><a class="code-style-switch" title="Arta" href="#"                       >Arta</a></li>\
+          <li><a class="code-style-switch" title="Monokai" href="#"                    >Monokai</a></li>\
+          <li><a class="code-style-switch" title="XCode" href="#"                      >XCode</a></li>\
+          <li><a class="code-style-switch" title="Pojoaque" href="#"                   >Pojoaque</a></li>\
+          <li><a class="code-style-switch" title="Rainbow" href="#"                    >Rainbow</a></li>\
+          <li><a class="code-style-switch" title="Tomorrow" href="#"                   >Tomorrow</a></li>\
+          <li><a class="code-style-switch" title="Tomorrow Night" href="#"             >Tomorrow Night</a></li>\
+          <li><a class="code-style-switch" title="Tomorrow Night Bright" href="#"      >Tomorrow Night Bright</a></li>\
+          <li><a class="code-style-switch" title="Tomorrow Night Blue" href="#"        >Tomorrow Night Blue</a></li>\
+          <li><a class="code-style-switch" title="Tomorrow Night Eighties" href="#"    >Tomorrow Night Eighties</a></li>\
+        </ul>\
+      </li>\
+    </ul>');
+    $('.code-style-switch').click(function(){
+      var css = $('link[title="' + $(this).attr('title') + '"]');
+      $('#code-style[rel=stylesheet]').attr('href', css.attr('href'));
+      $('.code-style-switch').closest('li').removeClass('active');
+      $(this).closest('li').addClass('active');
+      return false;
+    });
+});
+</script>
+ 
+
+</head>
+
+<body>
+<h1>打撃能力の比較: XRみたいな指標を計算する</h1>
+
+<h2>はじめに 手元でセイバーメトリクス</h2>
+
+<p>イチローと松井、どちらが凄いのかを考えます。</p>
+
+<p>ヒットを量産するイチロー。長打力の松井。打者のタイプが異なります。どうやって比べましょうか。</p>
+
+<p>セイバーメトリクスでは、打撃総合能力を表す指標がいくつか提案されています。</p>
+
+<p>今回は<a href="http://baseballconcrete.web.fc2.com/glossary.html#xr">XR</a>という指標に注目します。</p>
+
+<p>表式は以下の通り(長いので少し省略があります)。</p>
+
+<p>\[
+\begin{aligned}
+\text{XR} & = 0.50\times \text{単打数} + 0.72 \times \text{二塁打数} + 1.04 \times {三塁打数} \\
+          & + 1.44 \times \text{本塁打数} + 0.34 \times \text{四死球数} +  0.25 \times \text{敬遠数} \\ 
+          & + 0.18 \times \text{盗塁数} - 0.098 \times{三振数} + \ldots 
+\end{aligned}
+\]</p>
+
+<p>XRは、選手が生み出した総得点を算出するための指標です。</p>
+
+<p>とはいったものの、各打席結果に、価値の重みをつけて線型和をとっているだけです。</p>
+
+<p>本塁打は1本あたり1.44点生み出す、という気持ちで作られています。</p>
+
+<p>なるほど。</p>
+
+<p>...この重み係数はどこから来たのでしょうか。</p>
+
+<h2>線形回帰でヒットとホームランの価値を計算</h2>
+
+<p>2005年のメジャーリーグの試合結果データを利用して、重み係数を作成します。</p>
+
+<p>チーム得点 ~ 単打数 + 二塁打数 + 三塁打数 + 本塁打数 + 四球数 + 盗塁数 + 盗塁失敗数 + 三振数 + 凡打数 </p>
+
+<p>という線型モデルを立てて、係数を推定します。</p>
+
+<p>これにより、各イベントの生み出す得点数を調べます。</p>
+
+<p>利用するデータは2005年のメジャーリーグ全試合全打席結果のデータです。</p>
+
+<p>イチローも松井も、まだ元気だった頃です。</p>
+
+<h3>計算の準備</h3>
+
+<p>まずはパッケージとデータの準備をします。</p>
+
+<pre><code class="r">library(dplyr)
+library(data.table)
+library(tidyr)
+
+## データの用意。
+## dat = fread(&quot;../../data/all2005.csv&quot;)
+dat = fread(&quot;../../data/all2005.csv&quot;)
+dat_colnames = fread(&quot;../../data/names.csv&quot;, header =FALSE) %&gt;% unlist
+names(dat) = dat_colnames
+
+## 内容確認 データのサイズ
+dat %&gt;% dim
+</code></pre>
+
+<pre><code>## [1] 191825     97
+</code></pre>
+
+<pre><code class="r">## 内容確認 データの項目
+dat %&gt;% names
+</code></pre>
+
+<pre><code>##  [1] &quot;GAME_ID&quot;                   &quot;AWAY_TEAM_ID&quot;             
+##  [3] &quot;INN_CT&quot;                    &quot;BAT_HOME_ID&quot;              
+##  [5] &quot;OUTS_CT&quot;                   &quot;BALLS_CT&quot;                 
+##  [7] &quot;STRIKES_CT&quot;                &quot;PITCH_SEQ_TX&quot;             
+##  [9] &quot;AWAY_SCORE_CT&quot;             &quot;HOME_SCORE_CT&quot;            
+## [11] &quot;BAT_ID&quot;                    &quot;BAT_HAND_CD&quot;              
+## [13] &quot;RESP_BAT_ID&quot;               &quot;RESP_BAT_HAND_CD&quot;         
+## [15] &quot;PIT_ID&quot;                    &quot;PIT_HAND_CD&quot;              
+## [17] &quot;RESP_PIT_ID&quot;               &quot;RESP_PIT_HAND_CD&quot;         
+## [19] &quot;POS2_FLD_ID&quot;               &quot;POS3_FLD_ID&quot;              
+## [21] &quot;POS4_FLD_ID&quot;               &quot;POS5_FLD_ID&quot;              
+## [23] &quot;POS6_FLD_ID&quot;               &quot;POS7_FLD_ID&quot;              
+## [25] &quot;POS8_FLD_ID&quot;               &quot;POS9_FLD_ID&quot;              
+## [27] &quot;BASE1_RUN_ID&quot;              &quot;BASE2_RUN_ID&quot;             
+## [29] &quot;BASE3_RUN_ID&quot;              &quot;EVENT_TX&quot;                 
+## [31] &quot;LEADOFF_FL&quot;                &quot;PH_FL&quot;                    
+## [33] &quot;BAT_FLD_CD&quot;                &quot;BAT_LINEUP_ID&quot;            
+## [35] &quot;EVENT_CD&quot;                  &quot;BAT_EVENT_FL&quot;             
+## [37] &quot;AB_FL&quot;                     &quot;H_FL&quot;                     
+## [39] &quot;SH_FL&quot;                     &quot;SF_FL&quot;                    
+## [41] &quot;EVENT_OUTS_CT&quot;             &quot;DP_FL&quot;                    
+## [43] &quot;TP_FL&quot;                     &quot;RBI_CT&quot;                   
+## [45] &quot;WP_FL&quot;                     &quot;PB_FL&quot;                    
+## [47] &quot;FLD_CD&quot;                    &quot;BATTEDBALL_CD&quot;            
+## [49] &quot;BUNT_FL&quot;                   &quot;FOUL_FL&quot;                  
+## [51] &quot;BATTEDBALL_LOC_TX&quot;         &quot;ERR_CT&quot;                   
+## [53] &quot;ERR1_FLD_CD&quot;               &quot;ERR1_CD&quot;                  
+## [55] &quot;ERR2_FLD_CD&quot;               &quot;ERR2_CD&quot;                  
+## [57] &quot;ERR3_FLD_CD&quot;               &quot;ERR3_CD&quot;                  
+## [59] &quot;BAT_DEST_ID&quot;               &quot;RUN1_DEST_ID&quot;             
+## [61] &quot;RUN2_DEST_ID&quot;              &quot;RUN3_DEST_ID&quot;             
+## [63] &quot;BAT_PLAY_TX&quot;               &quot;RUN1_PLAY_TX&quot;             
+## [65] &quot;RUN2_PLAY_TX&quot;              &quot;RUN3_PLAY_TX&quot;             
+## [67] &quot;RUN1_SB_FL&quot;                &quot;RUN2_SB_FL&quot;               
+## [69] &quot;RUN3_SB_FL&quot;                &quot;RUN1_CS_FL&quot;               
+## [71] &quot;RUN2_CS_FL&quot;                &quot;RUN3_CS_FL&quot;               
+## [73] &quot;RUN1_PK_FL&quot;                &quot;RUN2_PK_FL&quot;               
+## [75] &quot;RUN3_PK_FL&quot;                &quot;RUN1_RESP_PIT_ID&quot;         
+## [77] &quot;RUN2_RESP_PIT_ID&quot;          &quot;RUN3_RESP_PIT_ID&quot;         
+## [79] &quot;GAME_NEW_FL&quot;               &quot;GAME_END_FL&quot;              
+## [81] &quot;PR_RUN1_FL&quot;                &quot;PR_RUN2_FL&quot;               
+## [83] &quot;PR_RUN3_FL&quot;                &quot;REMOVED_FOR_PR_RUN1_ID&quot;   
+## [85] &quot;REMOVED_FOR_PR_RUN2_ID&quot;    &quot;REMOVED_FOR_PR_RUN3_ID&quot;   
+## [87] &quot;REMOVED_FOR_PH_BAT_ID&quot;     &quot;REMOVED_FOR_PH_BAT_FLD_CD&quot;
+## [89] &quot;PO1_FLD_CD&quot;                &quot;PO2_FLD_CD&quot;               
+## [91] &quot;PO3_FLD_CD&quot;                &quot;ASS1_FLD_CD&quot;              
+## [93] &quot;ASS2_FLD_CD&quot;               &quot;ASS3_FLD_CD&quot;              
+## [95] &quot;ASS4_FLD_CD&quot;               &quot;ASS5_FLD_CD&quot;              
+## [97] &quot;EVENT_ID&quot;
+</code></pre>
+
+<p>97列もあります。各列の説明するだけでも大変です。</p>
+
+<p>試合の各状況が1行に表されている、ということだけ分かっていればいいです。</p>
+
+<p>2013年はレギュラーシーズン全体で<code>191825</code>イベントがあった、ということです。</p>
+
+<p>使う列の意味は、使うときに説明します。</p>
+
+<h3>試合-得点テーブルを作成</h3>
+
+<p>線形回帰の目的変数用データが必要です。</p>
+
+<p>試合ID、ホームチームなのかビジターチームなのか、得点、という3列のテーブルを作ります。</p>
+
+<p>試合IDはGAME_ID列。ホームorビジターの得点はHOME_SCORE_CT, AWAY_SCOCE_CT列で表されています。</p>
+
+<pre><code class="r">## ここで使うデータ
+dat_score = 
+  dat %&gt;%
+  filter(GAME_END_FL == &quot;T&quot;) %&gt;% ## 1試合の最後の行である、という意味
+  select(GAME_ID, AWAY_SCORE_CT, HOME_SCORE_CT) 
+
+## 内容確認
+dat_score %&gt;% head(1)
+</code></pre>
+
+<pre><code>##         GAME_ID AWAY_SCORE_CT HOME_SCORE_CT
+## 1: ANA200504050             2             3
+</code></pre>
+
+<pre><code class="r">## 試合別、ホーム/アウェイ別の得点
+dat_score_all = 
+  dat_score %&gt;% 
+  gather(HOME_AWAY, SCORE, -GAME_ID) %&gt;% 
+  mutate(HOME_AWAY_FLG = ifelse(HOME_AWAY==&quot;HOME_SCORE_CT&quot;, 1, 0)) %&gt;%
+  select(-HOME_AWAY)
+
+## 結果の確認
+## GAME_IDの試合で、HOME/AWAYチームがSCORE点をとった。
+dat_score_all %&gt;% head(1)
+</code></pre>
+
+<pre><code>##        GAME_ID SCORE HOME_AWAY_FLG
+## 1 ANA200504050     2             0
+</code></pre>
+
+<p>1行目を見ると、2005年04月05日のビジターチームは、2点とったみたいです。</p>
+
+<h3>試合ごとに、各打撃イベントの発生回数を集計</h3>
+
+<p>各種イベントの回数を集計します。</p>
+
+<p>GAME_IDとHOME/AWAY, さらにEVENT_CD列(イベントコード)を利用します。</p>
+
+<p>EVENT_CDの詳細は<a href="http://www.retrosheet.org/datause.txt">このページ</a>に書いてありますが、今回利用するところだけ抜粋します。</p>
+
+<p>EVENT_CDと内容は、</p>
+
+<ul>
+<li>2  : 凡打</li>
+<li>3  : 三振</li>
+<li>4  : 盗塁</li>
+<li>6  : 盗塁死</li>
+<li>14 : 四球</li>
+<li>15 : 敬遠四球</li>
+<li>16 : 死球</li>
+<li>20 : 単打</li>
+<li>21 : 二塁打</li>
+<li>22 : 三塁打</li>
+<li>23 : 本塁打</li>
+</ul>
+
+<p>です。それぞれのイベントが出現した回数を、試合とチームごとに集計します。</p>
+
+<pre><code class="r">dat_game = 
+  dat %&gt;% 
+  select(GAME_ID, BAT_HOME_ID, EVENT_CD) %&gt;% 
+  filter(EVENT_CD %in% c(2:4,6,14:16, 20:23)) 
+
+## 各イベントのフラグを立てます
+dat_game_event = 
+  dat_game %&gt;% 
+  mutate(generic_out = ifelse(EVENT_CD == 2, 1, 0)) %&gt;%
+  mutate(strike_out = ifelse(EVENT_CD == 3, 1, 0)) %&gt;%
+  mutate(steal_base = ifelse(EVENT_CD == 4, 1, 0)) %&gt;%
+  mutate(caught_stealing = ifelse(EVENT_CD == 6, 1, 0)) %&gt;%
+  mutate(bb = ifelse(EVENT_CD %in% c(14,16), 1, 0)) %&gt;%
+  mutate(intentional = ifelse(EVENT_CD == 15, 1, 0)) %&gt;%
+  mutate(single = ifelse(EVENT_CD == 20, 1, 0))  %&gt;%
+  mutate(double = ifelse(EVENT_CD == 21, 1, 0)) %&gt;%
+  mutate(triple = ifelse(EVENT_CD == 22, 1, 0)) %&gt;%
+  mutate(homerun = ifelse(EVENT_CD == 23, 1, 0)) %&gt;%
+  select(-EVENT_CD) %&gt;% 
+  mutate(HOME_AWAY_FLG = BAT_HOME_ID) %&gt;%
+  select(-BAT_HOME_ID)
+
+## 各イベント列でsumを取れば回数が出てきます。
+## summarise_eachを使えば簡単です。
+dat_game_event_count = 
+  dat_game_event %&gt;%
+  group_by(GAME_ID, HOME_AWAY_FLG) %&gt;%
+  summarise_each(funs(sum))
+
+## 結果の確認
+dat_game_event_count %&gt;% head(1)
+</code></pre>
+
+<pre><code>##        GAME_ID HOME_AWAY_FLG generic_out strike_out steal_base
+## 1 ANA200504050             0          17          8          0
+##   caught_stealing bb intentional single double triple homerun
+## 1               0  6           0      4      2      0       1
+</code></pre>
+
+<p>2005年4月5日のANA(エンゼルス)の試合で、アウェイチームが8三振6四球, 4単打2二塁打1本塁打だったみたいですね。</p>
+
+<p>ちゃんとできているように見えます。</p>
+
+<h3>線形回帰</h3>
+
+<p>準備が整ったので、テーブルを結合して線形回帰します。</p>
+
+<p>試合-得点テーブルと、試合-イベント回数テーブルを結合します。</p>
+
+<pre><code class="r">dat_score_event_count = 
+  dat_score_all %&gt;% 
+  inner_join(dat_game_event_count, by = c(&quot;GAME_ID&quot;, &quot;HOME_AWAY_FLG&quot;)) %&gt;% 
+  select(-GAME_ID, -HOME_AWAY_FLG) 
+
+
+## 結合結果. 
+## SCORE点とった試合で、各イベントが何回あったか、という表です。
+dat_score_event_count %&gt;% head(1)
+</code></pre>
+
+<pre><code>##   SCORE generic_out strike_out steal_base caught_stealing bb intentional
+## 1     2          17          8          0               0  6           0
+##   single double triple homerun
+## 1      4      2      0       1
+</code></pre>
+
+<pre><code class="r">## 線形回帰
+lm_res = lm(dat_score_event_count, formula = SCORE ~ .)
+
+## 推定された係数
+lm_coef = coef(lm_res)
+lm_coef
+</code></pre>
+
+<pre><code>##     (Intercept)     generic_out      strike_out      steal_base 
+##      0.63012469     -0.11857960     -0.12262584      0.08676059 
+## caught_stealing              bb     intentional          single 
+##     -0.36105497      0.33566397      0.09889731      0.46789201 
+##          double          triple         homerun 
+##      0.76494241      1.03139625      1.39726489
+</code></pre>
+
+<p>ホームラン1本は1.41点生み出す、という結果です。</p>
+
+<p>先ほどのXRの定義式では、係数は1.44でした。大体同じですね。</p>
+
+<p>XRの定義式: 
+\[
+\begin{aligned}
+\text{XR} & = 0.50\times \text{単打数} + 0.72 \times \text{二塁打数} + 1.04 \times {三塁打数} \\
+          & + 1.44 \times \text{本塁打数} + 0.34 \times \text{四死球数} +  0.25 \times \text{敬遠数} \\ 
+          & + 0.18 \times \text{盗塁数} - 0.098 \times{三振数} + \ldots .
+\end{aligned}
+\]</p>
+
+<p>今回、線形回帰で得られたXR:</p>
+
+<p>\[
+\begin{aligned}
+\text{XR} & = 0.47\times \text{単打数} + 0.76 \times \text{二塁打数} + 1.03 \times {三塁打数} \\
+          & + 1.40 \times \text{本塁打数} + 0.33 \times \text{四死球数} +  0.10 \times \text{敬遠数} \\ 
+          & + 0.09 \times \text{盗塁数} - 0.12 \times{三振数} + \ldots 
+\end{aligned}.
+\]</p>
+
+<p>盗塁の係数が大きく異なっています。どうしましょうか。分からないので、無視します。</p>
+
+<p>今回の線形回帰によって得られた係数によって、イチローと松井の打撃能力を評価してみます.</p>
+
+<h2>イチローと松井の打撃能力</h2>
+
+<p>イベント重み係数から、得点創出能力XR(の簡易版)を計算してみます。</p>
+
+<p>RのLahmanパッケージに、通算成績データが入っています。</p>
+
+<pre><code class="r">library(Lahman)
+
+## 打撃成績を整理
+batting_stats = 
+  Batting %&gt;% 
+  mutate(X1B = H - X2B - X3B - HR) %&gt;%
+  mutate(GO = AB - H - SO) %&gt;% 
+  mutate(BB = BB + HBP) %&gt;% 
+  select(playerID, yearID, GO, AB, X1B, X2B, X3B, HR, SB, CS, BB, IBB, HBP, SO) 
+
+## 選手情報のマスター
+master_stats =
+  Master %&gt;% 
+  mutate(name = paste(nameFirst, nameLast, sep = &quot; &quot;)) %&gt;%
+  select(playerID, name)
+
+## IDと結合して、フルネームを取得する
+batting_master = 
+  batting_stats %&gt;% 
+  inner_join(master_stats, by = &quot;playerID&quot;) 
+
+## イチローの成績
+batting_master %&gt;% 
+  select(-playerID) %&gt;%
+  filter(name == &quot;Ichiro Suzuki&quot;)
+</code></pre>
+
+<pre><code>##    yearID  GO  AB X1B X2B X3B HR SB CS BB IBB HBP SO          name
+## 1    2001 397 692 192  34   8  8 56 14 38  10   8 53 Ichiro Suzuki
+## 2    2002 377 647 165  27   8  8 31 15 73  27   5 62 Ichiro Suzuki
+## 3    2003 398 679 162  29   8 13 34  8 42   7   6 69 Ichiro Suzuki
+## 4    2004 379 704 225  24   5  8 36 11 53  19   4 63 Ichiro Suzuki
+## 5    2005 407 679 158  21  12 15 33  8 52  23   4 66 Ichiro Suzuki
+## 6    2006 400 695 186  20   9  9 45  2 54  16   5 71 Ichiro Suzuki
+## 7    2007 363 678 203  22   7  6 37  8 52  13   3 77 Ichiro Suzuki
+## 8    2008 408 686 180  20   7  6 43  4 56  12   5 65 Ichiro Suzuki
+## 9    2009 343 639 179  31   4 11 26  9 36  15   4 71 Ichiro Suzuki
+## 10   2010 380 680 175  30   3  6 42  9 48  13   3 86 Ichiro Suzuki
+## 11   2011 424 677 154  22   3  5 40  7 39  13   0 69 Ichiro Suzuki
+## 12   2012 257 402  81  15   5  4 15  2 17   4   0 40 Ichiro Suzuki
+## 13   2012 133 227  54  13   1  5 14  5  7   1   2 21 Ichiro Suzuki
+## 14   2013 321 520 111  15   3  7 20  4 27   4   1 63 Ichiro Suzuki
+## 15   2014 189 359  86  13   2  1 15  3 22   1   1 68 Ichiro Suzuki
+</code></pre>
+
+<pre><code class="r">## 松井の成績
+batting_master %&gt;% 
+  select(-playerID) %&gt;%
+  filter(name == &quot;Hideki Matsui&quot;) 
+</code></pre>
+
+<pre><code>##    yearID  GO  AB X1B X2B X3B HR SB CS BB IBB HBP  SO          name
+## 1    2003 358 623 120  42   1 16  2  2 66   5   3  86 Hideki Matsui
+## 2    2004 307 584 107  34   2 31  3  0 91   2   3 103 Hideki Matsui
+## 3    2005 359 629 121  45   3 23  2  2 66   7   3  78 Hideki Matsui
+## 4    2006  97 172  35   9   0  8  1  0 27   2   0  23 Hideki Matsui
+## 5    2007 318 547  99  28   4 25  4  2 76   2   3  73 Hideki Matsui
+## 6    2008 191 337  73  17   0  9  0  0 41   6   3  47 Hideki Matsui
+## 7    2009 256 456  75  21   1 28  0  1 68   1   4  75 Hideki Matsui
+## 8    2010 252 482  86  24   1 21  0  1 68   6   1  98 Hideki Matsui
+## 9    2011 303 517  90  28   0 12  1  1 57   3   1  84 Hideki Matsui
+## 10   2012  59  95  11   1   0  2  0  0  8   1   0  22 Hideki Matsui
+</code></pre>
+
+<pre><code class="r">## 今回計算するXRの簡易版を, ggXRとします。
+## 線型和をとればいいです。
+batting_ggXR = 
+  batting_master %&gt;% 
+  mutate(ggXR = GO * lm_coef[&quot;generic_out&quot;] + 
+                X1B * lm_coef[&quot;single&quot;] + 
+                X2B * lm_coef[&quot;double&quot;] + 
+                X3B * lm_coef[&quot;triple&quot;] + 
+                HR  * lm_coef[&quot;homerun&quot;] + 
+                SB  * lm_coef[&quot;steal_base&quot;] + 
+                CS  * lm_coef[&quot;caught_stealing&quot;] + 
+                BB  * lm_coef[&quot;bb&quot;] + 
+                IBB  * lm_coef[&quot;intentional&quot;] + 
+                SO  * lm_coef[&quot;strike_out&quot;])
+</code></pre>
+
+<p>内容の確認をします。</p>
+
+<p>歴代の得点創出能力(ggXR)のランキングを見てみましょう。</p>
+
+<pre><code class="r">## 歴代ggXRのランキング
+batting_ggXR %&gt;% 
+  arrange(desc(ggXR)) %&gt;% 
+  select(-playerID) %&gt;%
+  head(10)
+</code></pre>
+
+<pre><code>##    yearID  GO  AB X1B X2B X3B HR SB CS  BB IBB HBP  SO           name
+## 1    2004 197 373  60  27   3 45  6  1 241 120   9  41    Barry Bonds
+## 2    2001 227 476  49  32   2 73 13  3 186  35   9  93    Barry Bonds
+## 3    2002 207 403  70  31   2 46  9  2 207  68   9  47    Barry Bonds
+## 4    1998 202 509  61  21   0 70  1  0 168  28   6 155   Mark McGwire
+## 5    2001 235 577  86  34   5 64  0  2 122  37   6 153     Sammy Sosa
+## 6    2000 303 580 113  59   2 42  5  3 107  22   4  61    Todd Helton
+## 7    2001 328 609  98  36   7 57  1  1 114  24  14  83  Luis Gonzalez
+## 8    2000 269 569  97  57   1 41  0  1 138  18  15 104 Carlos Delgado
+## 9    1997 270 568 109  46   4 49 33  8  92  14  14  90   Larry Walker
+## 10   2009 318 568  93  45   1 47 16  4 124  44   9  64  Albert Pujols
+##        ggXR
+## 1  179.2324
+## 2  179.0859
+## 3  168.7594
+## 4  158.7011
+## 5  158.0888
+## 6  152.7839
+## 7  151.5481
+## 8  150.3962
+## 9  147.9666
+## 10 145.0006
+</code></pre>
+
+<p>歴代の得点創出能力、Top10です。パワーヒッターしかいません。</p>
+
+<p>1位から3位までバリーボンズです。ステロイド全盛期とはいえ、さすがです。</p>
+
+<p>では、イチローと松井の成績を出してみましょう。</p>
+
+<pre><code class="r">## シーズン通算の創出得点ランキング
+batting_ggXR %&gt;%
+  filter(name %in% c(&quot;Ichiro Suzuki&quot;, &quot;Hideki Matsui&quot;)) %&gt;% 
+  arrange(desc(ggXR)) %&gt;% 
+  select(yearID, name, ggXR) %&gt;%
+  head
+</code></pre>
+
+<pre><code>##   yearID          name      ggXR
+## 1   2004 Ichiro Suzuki 106.12334
+## 2   2004 Hideki Matsui 103.41959
+## 3   2005 Hideki Matsui  96.43124
+## 4   2001 Ichiro Suzuki  95.24535
+## 5   2007 Ichiro Suzuki  93.98948
+## 6   2006 Ichiro Suzuki  90.93676
+</code></pre>
+
+<p>打席数が多かったイチローは、シーズン通算での創出得点が多いです。</p>
+
+<p>打席数で割ることで、打席辺りの創出得点が計算されます。</p>
+
+<p>セイバーメトリクスでは、XR27と呼ばれる指標に該当します。</p>
+
+<p>27アウトとられるまでに何点取れるか、というものです。</p>
+
+<pre><code class="r">## 打席あたりの創出得点
+batting_ggXR %&gt;% 
+  filter(name %in% c(&quot;Ichiro Suzuki&quot;, &quot;Hideki Matsui&quot;)) %&gt;% 
+  mutate(ggXR27 = ggXR * 27 / (AB + BB + IBB + HBP)) %&gt;%
+  arrange(desc(ggXR27)) %&gt;%
+  select(yearID, name, ggXR, ggXR27) %&gt;%
+  head
+</code></pre>
+
+<pre><code>##   yearID          name      ggXR   ggXR27
+## 1   2004 Hideki Matsui 103.41959 4.106366
+## 2   2006 Hideki Matsui  29.46369 3.957809
+## 3   2009 Hideki Matsui  74.32018 3.793280
+## 4   2005 Hideki Matsui  96.43124 3.693112
+## 5   2007 Hideki Matsui  85.47009 3.674670
+## 6   2004 Ichiro Suzuki 106.12334 3.673500
+</code></pre>
+
+<p>1打席あたりで計算すると、松井が凄いみたいです。</p>
+
+<p>ちなみに、XR27の値4.10は、今年のセリーグではエルナンデス(4.08)、パ・リーグではクルーズ(4.11)くらいで</p>
+
+<p>創出得点の意味では、そこそこ活躍した外国人、という程度の成績です。</p>
+
+<h2>まとめ</h2>
+
+<p>打撃能力評価のために創出得点を計算して、イチローと松井の成績を比較してみました。</p>
+
+<p>セイバーメトリクスでは、XRと呼ばれる指標です。</p>
+
+<p>線形回帰によって打撃イベントの価値重みを計算すると、セイバーメトリクスの内容と似た結果が得られました。</p>
+
+<p>比べてみると、シーズン通算ではイチローが、1打席あたりでは松井が優れていました。</p>
+
+</body>
+
+</html>
