@@ -15,7 +15,7 @@
 
 * GameSituation 試合状況と攻撃結果
 
-* teamData/stats.dat 2014年の成績データ
+* teamData/stats.dat 2015年の最終成績データ
 
 * createBaseballDB.bash 実行すると、stats.dat内の成績データをDBに突っ込む
 
@@ -23,3 +23,4 @@ GameSituationにplayerDataを与えてattackすると, gameSituationが変化す
 
 ## ToDo
 
+なにしよう
