@@ -47,7 +47,7 @@ class GameSituation{
       if(secondBase == 1){
         // シングルヒットでは2塁ランナーの生還率が3割, ということらしい
         double secondRunnerScoringRandomNumber = Math.random();
-        if(secondRunnerScoringRandomNumber < 0.3){
+        if(secondRunnerScoringRandomNumber < 0.55){
           score += thirdBase + secondBase; 
           thirdBase = 0;
           secondBase = firstBase;

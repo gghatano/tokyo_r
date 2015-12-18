@@ -7,13 +7,15 @@ dir=$(dirname $0)
 [ -e $dir/tmp.matsui.txt ] && rm $dir/tmp.matsui.txt
 
 ## input batter name
-echo -n "選手名をフルネームで正確に入力(デフォルトはイチロー) : "
-read inputPlayerName
+#echo -n "選手名をフルネームで正確に入力(デフォルトはイチロー) : "
+#read inputPlayerName
+inputPlayerName=$1
 
 [ "$inputPlayerName" = "" ] && inputPlayerName="イチロー"
 
-echo -n "試合数を入力(デフォルトは1試合) : "
-read gameNum
+#echo -n "試合数を入力(デフォルトは1試合) : "
+#read gameNum
+gameNum=1000
 
 [ "$gameNum" = "" ] && gameNum=1
 

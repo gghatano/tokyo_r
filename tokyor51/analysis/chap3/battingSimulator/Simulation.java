@@ -10,7 +10,7 @@ class Simulation{
 
     String [] startingMember = new String[9];
     for (int i = 0; i < 9; i++){
-      startingMember[i] = "山田哲人";
+      startingMember[i] = "長野久義";
     }
 
     /* definition */
