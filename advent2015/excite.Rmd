@@ -1,0 +1,245 @@
+エキサイティング度合いを勝利確率変動で見よう
+===
+
+```{r, message=FALSE}
+library(dplyr)
+library(pipeR)
+library(readr)
+library(ggplot2)
+library(Lahman)
+library(data.table)
+
+fullname_batid =
+  Master %>% 
+  mutate(FULLNAME = paste(nameFirst, nameLast)) %>% 
+  mutate(BAT_ID = retroID) %>% 
+  select(BAT_ID, FULLNAME)
+```
+
+
+```{r, message=FALSE, results='asis'}
+
+## データを作る
+pbpData = fread("all2015.csv", header=FALSE)
+namedata = fread("names.csv", header = FALSE) %>% unlist
+names(pbpData) = namedata
+
+## 勝率テーブル
+winProbData = read_csv("win_prob.csv")
+## 内容
+winProbData %>% head %>%
+  xtable::xtable() %>% print("html")
+```
+1行目は、
+
+1回表、0アウトランナー無し、アウェイで8点負けている状況という試合が1つあった、ということです。
+
+HOME-AWAYのフィールドが点差を表しています。
+
+```{r, results='asis'}
+## 10点差以上は10にまとめる
+winProbDataMod = 
+  winProbData %>% 
+  mutate(HOME_AWAY_MOD = ifelse(abs(HOME_AWAY) > 10, sign(HOME_AWAY) * 10, HOME_AWAY)) %>% 
+  group_by(INN_CT,BAT_HOME_ID, OUTS_CT, RUNNERS, HOME_AWAY_MOD) %>% 
+  summarise(HOME_LOSES = sum(HOME_LOSES),
+            GAMES = sum(GAMES),
+            HOME_WINS = sum(HOME_WINS)) %>% 
+  ungroup()
+
+## 内容確認
+winProbDataMod %>% 
+  select(HOME_AWAY_MOD) %>%
+  table
+
+## 勝率に変換
+winProbData = 
+  winProbDataMod %>% 
+  mutate(HOME_WIN_PROB = HOME_WINS / GAMES) %>%
+  mutate(AWAY_WIN_PROB = HOME_LOSES / GAMES) %>% 
+  select(-(HOME_LOSES:HOME_WINS))
+## 内容確認
+winProbData %>% 
+  head(9) %>% 
+  xtable::xtable() %>% print("html")
+```
+
+9行目は、試合開始時点を表しています。
+
+ホームの勝率が53.25%となっています。
+
+主催側のチームが有利、ということですが、3.25%程度です。
+
+もっと差がつくかと思っていました。
+
+## Play−by−Playデータと結合
+```{r, results='asis'}
+pbpData_for_merge = 
+  pbpData %>% 
+  mutate(RUNNERS = (BASE3_RUN_ID != "") * 100 + (BASE2_RUN_ID !="")*10 + (BASE1_RUN_ID !="")*1) %>%
+  mutate(HOME_AWAY = HOME_SCORE_CT - AWAY_SCORE_CT) %>%
+  mutate(HOME_AWAY_MOD = ifelse(abs(HOME_AWAY) > 10, sign(HOME_AWAY) * 10, HOME_AWAY)) 
+
+```
+
+
+```{r}
+pbpData_winProb = 
+  pbpData_for_merge %>% 
+  merge(winProbData, by = c("INN_CT","BAT_HOME_ID", "OUTS_CT", "RUNNERS", "HOME_AWAY_MOD"), all.x = TRUE) %>% as.data.table %>% 
+  arrange(GAME_ID, EVENT_ID)
+```
+
+HOMEのチームが勝ったか負けたかを調べておきます。
+```{r, message=FALSE, results='asis'}  
+dat = fread("GL2015.TXT", header=FALSE)
+winLoseData = 
+  dat %>% 
+  mutate(GAME_ID = paste(V7, V1, V2, sep="")) %>%
+  mutate(HOME_SCORE = V11, AWAY_SCORE = V10) %>% 
+  mutate(HOME_WIN_FLG = HOME_SCORE > AWAY_SCORE) %>% 
+  select(GAME_ID, HOME_SCORE, AWAY_SCORE, HOME_WIN_FLG)
+
+pbpData_winProb_winLose = 
+  pbpData_winProb %>% 
+  merge(winLoseData, by = "GAME_ID")
+
+```
+
+試合ごとに勝率変動を調べてみます。
+```{r, message=FALSE, warning=FALSE, results='asis'}
+pbpData_winProb_winLose_winProbMove = 
+  pbpData_winProb_winLose %>% 
+  group_by(GAME_ID) %>% 
+  mutate(WIN_PROB_MOVE = diff(c(HOME_WIN_PROB, HOME_WIN_FLG))) %>% 
+  as.data.table
+```
+
+## 最も勝率変動の大きかった試合
+
+勝率変動の絶対値の総和を計算して、エキサイティングな試合を評価してみます。
+
+勝率変動の絶対値の総和が大きい、上位5試合です。
+```{r, message=FALSE, warning=FALSE, results='asis'}
+pbpData_winProb_winLose_winProbMove %>% 
+  group_by(GAME_ID) %>% 
+  summarise(EXCITING_SCORE = sum(abs(WIN_PROB_MOVE))) %>% 
+  arrange(desc(EXCITING_SCORE)) %>%
+  select(GAME_ID, EXCITING_SCORE) %>% 
+  head(5) %>%
+  xtable::xtable() %>% print("html")
+```
+
+最も勝率変動が大きかった試合の様子を見てみましょう
+
+5月31日のバックスとブリュワーズの試合でした。
+
+```{r, message=FALSE, warning=FALSE, results='asis'}
+pbpData_winProb_winLose_winProbMove %>% 
+  filter(GAME_ID == "MIL201505310") %>% 
+  select(EVENT_ID, HOME_WIN_PROB) %>% 
+  rbind(data.frame(EVENT_ID = 153, HOME_WIN_PROB = 1)) %>% 
+  ggplot() + 
+  geom_line(aes(x=EVENT_ID, y = HOME_WIN_PROB))
+```
+
+[調べてみると、17回裏にサヨナラホームランを打った試合でした](http://live.baseball.yahoo.co.jp/mlb/game/table/?id=2015060105)。
+
+試合が長くなって、変動の和が大きくなっただけみたいです。
+
+これは良くないです。計算方法を変えてみます。
+
+勝率変動の最大値で評価することにします。
+
+```{r, message=FALSE, warning=FALSE, results='asis'}
+pbpData_winProb_winLose_winProbMove %>% 
+  group_by(GAME_ID) %>% 
+  summarise(EXCITING_SCORE = max(abs(WIN_PROB_MOVE))) %>% 
+  arrange(desc(EXCITING_SCORE)) %>%
+  ungroup %>% 
+  select(GAME_ID, EXCITING_SCORE) %>% 
+  head(5) %>% 
+  xtable::xtable(digits=4) %>% print("html")
+```
+
+7月27日の試合で、変動91%が最大でした。
+
+試合の内容を詳しく見てみましょう。
+
+勝率変動の様子を可視化してみます。
+
+```{r, message=FALSE, warning=FALSE, results='asis'}
+pbpData_winProb_winLose_winProbMove %>% 
+  filter(GAME_ID == "CHN201507270") %>% 
+  select(EVENT_ID, HOME_WIN_PROB) %>% as.data.frame %>% 
+  rbind(data.frame(EVENT_ID = 84, HOME_WIN_PROB = 1)) %>% 
+  ggplot() + 
+  geom_line(aes(x=EVENT_ID, y = HOME_WIN_PROB)) + 
+  ylim(0,1) + 
+  ggtitle("ホームチームの勝率変化 @CHN20150727") + 
+  theme_bw(base_family = "HiraKakuProN-W3") 
+
+```
+
+[この試合の詳細情報です](http://live.baseball.yahoo.co.jp/mlb/game/table/?id=2015072805)。
+
+1点差の2アウト1塁から逆転サヨナラホームランでした。
+
+理想的な"エキサイティングゲーム"です。
+
+2015年のMost Exciting Gameと認定しましょう。
+
+## 最もエキサイティングな選手
+
+選手ごとに勝率変動を集計して、最も勝利に貢献した選手を探してみましょう。
+
+ただ、勝率を上げたとしても、実際に勝たないと意味がありません。
+
+なので、勝った試合への貢献度を足しあわせてみましょう。負けたら貢献０とします。
+
+```{r, message=FALSE, warning=FALSE, results='asis'}
+pbpData_winProb_winLose_winProbMove %>% 
+  group_by(BAT_ID) %>% 
+  summarise(WIN_COMMITMENT = sum(WIN_PROB_MOVE * ( 2*(BAT_HOME_ID == 1)-1))) %>% ## ホームならプラス, アウェイならマイナス
+  merge(fullname_batid, by = "BAT_ID") %>% 
+  arrange(desc(WIN_COMMITMENT)) %>% head(10) %>%
+  xtable::xtable() %>% print("html")
+```
+
+ジョーイボットーが1位。通算で上昇させた勝率は6%でした。
+
+打点と比べてみますか。
+
+```{r}
+
+n = 20
+pbpData_wincommitment = 
+  pbpData_winProb_winLose_winProbMove %>% 
+  group_by(BAT_ID) %>% 
+  summarise(WIN_COMMITMENT = sum(WIN_PROB_MOVE * ( 2*(BAT_HOME_ID == 1)-1))) %>% 
+  arrange(desc(WIN_COMMITMENT)) %>% 
+  mutate(WIN_COMMITMENT_RANK = 1:n) %>% 
+  head(n)
+
+pbpData_rbi = 
+  pbpData %>% 
+  group_by(BAT_ID) %>% 
+  summarise(RBI = sum(RBI_CT)) %>% 
+  merge(fullname_batid, by = "BAT_ID") %>% 
+  merge(pbpData_wincommitment, by = "BAT_ID") %>%
+  arrange(desc(RBI)) %>% 
+  head(n) %>% 
+  mutate(RBI_RANK = 1:n)
+
+pbpData_rbi %>% 
+  ggplot(aes(x = RBI_RANK, y = WIN_COMMITMENT_RANK, label = FULLNAME)) +
+  geom_point() + 
+  geom_text(hjust=0, vjust=0) + 
+  theme_bw(base_family = "HiraKakuProN-W3") + 
+  ggtitle("x: 打点ランキング y:勝利貢献度ランキング")
+
+
+```
+
+
+
